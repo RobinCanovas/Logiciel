@@ -1,12 +1,11 @@
 from fastapi import APIRouter, UploadFile, File
 from app.services.pdf_service import extract_text
-from app.utils.ai_client import generate_summary_and_quiz2  # version factice ou OpenAI
+from app.utils.ai_client import generate_summary_and_quiz2
 import os
 import json
 
 router = APIRouter()
 
-# Crée le dossier temp si inexistant
 if not os.path.exists("temp"):
     os.makedirs("temp")
 
@@ -18,21 +17,28 @@ async def upload_pdf(file: UploadFile = File(...)):
 
     # Sauvegarde PDF
     file_location = f"temp/{file.filename}"
-    contents = await file.read()  # async read
+    contents = await file.read()
     with open(file_location, "wb") as f:
         f.write(contents)
 
     # Extraction texte
     text = extract_text(file_location)
 
-    # Génération IA (ou factice)
+    # Génération résumé + quiz factice
     result_text = generate_summary_and_quiz2(text)
 
     # Essaye de parser JSON renvoyé par l'IA
     try:
         result = json.loads(result_text)
     except Exception:
-        # Fallback si l'IA renvoie du texte brut
         result = {"summary": result_text, "quiz": []}
 
-    return result
+    # Prépare réponse complète
+    response = {
+        "filename": file.filename,
+        "filesize": len(contents),
+        "text_preview": text[:500],
+        "result": result
+    }
+
+    return response
